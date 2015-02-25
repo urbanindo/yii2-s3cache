@@ -1,6 +1,10 @@
 # yii2-s3cache
 File caching component for Yii2 using AWS Simple Storage Service
 
+[![Latest Stable Version](https://poser.pugx.org/urbanindo/yii2-s3cache/v/stable.svg)](https://packagist.org/packages/urbanindo/yii2-s3cache)
+[![Total Downloads](https://poser.pugx.org/urbanindo/yii2-s3cache/downloads.svg)](https://packagist.org/packages/urbanindo/yii2-s3cache)
+[![Latest Unstable Version](https://poser.pugx.org/urbanindo/yii2-s3cache/v/unstable.svg)](https://packagist.org/packages/urbanindo/yii2-s3cache)
+
 This is intended for large and long-lived objects.
 
 ## Installation
