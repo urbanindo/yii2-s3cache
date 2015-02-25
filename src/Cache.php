@@ -36,6 +36,19 @@ class Cache extends \yii\caching\Cache {
     const DIRECTORY_SEPARATOR = '/';
 
     /**
+     * A string prefixed to every cache key so that it is unique globally in the whole cache storage.
+     * It is recommended that you set a unique cache key prefix for each application if the same cache
+     * storage is being used by different applications.
+     * 
+     * To ensure interoperability, only alphanumeric characters should be used.
+     * 
+     * But for S3 cache, it's okay to use '/' for convenience.
+     * 
+     * @var string 
+     */
+    public $keyPrefix;
+
+    /**
      * The probability (parts per million) that garbage collection (GC) should be performed
      * when storing a piece of data in the cache. Defaults to 10, meaning 0.001% chance.
      * This number should be between 0 and 1000000. A value 0 means no GC will be performed at all.
@@ -50,10 +63,28 @@ class Cache extends \yii\caching\Cache {
     public $bucket = '';
 
     /**
-     * The path prefix.
-     * @var string 
+     * The directory path for the cache.
+     * 
+     * This is useful if the bucket is used by many other components.
+     * @var string
      */
-    public $cachePrefix = '';
+    public $directoryPath = '';
+
+    /**
+     * The level of sub-directories to store cache files. Defaults to 0.
+     * 
+     * This will separate string key into hierachical directory. This will be
+     * helpful when using hashKey and manual browsing.
+     * @var integer
+     */
+    public $directoryLevel = 0;
+
+    /**
+     * Whether to hash the key or not when the key is already string.
+     * 
+     * @var boolean
+     */
+    public $hashKey = false;
 
     /**
      * Cache file suffix. Defaults to '.bin'.
@@ -88,6 +119,38 @@ class Cache extends \yii\caching\Cache {
     }
 
     /**
+     * Checks whether a specified key exists in the cache.
+     * 
+     * This can be faster than getting the value from the cache if the data is big.
+     * Note that this method does not check whether the dependency associated
+     * with the cached data, if there is any, has changed. So a call to [[get]]
+     * may return false while exists returns true.
+     * @param mixed $key a key identifying the cached value. This can be a simple string or
+     * a complex data structure consisting of factors representing the key.
+     * @return boolean true if a value exists in cache, false if the value is not in the cache or expired.
+     */
+    public function exists($key) {
+        $key = $this->buildKey($key);
+        $expires = $this->getObjectExpirationTime($cacheKey);
+        return $expires !== false;
+    }
+
+    /**
+     * Builds a normalized cache key from a given key.
+     *
+     * This will baypass if the we don't want to normalize the key.
+     *
+     * @param mixed $key the key to be normalized
+     * @return string the generated cache key
+     */
+    public function buildKey($key) {
+        if (!is_string($key) || $this->hashKey) {
+            return parent::buildKey($key);
+        }
+        return $this->keyPrefix . $key;
+    }
+
+    /**
      * Stores a value identified by a key into cache if the cache does not contain this key.
      * This is the implementation of the method declared in the parent class.
      *
@@ -99,7 +162,8 @@ class Cache extends \yii\caching\Cache {
     protected function addValue($key, $value, $duration) {
         $cacheKey = $this->getCacheKey($key);
         try {
-            if ($this->getObjectExpirationTime($cacheKey) > time()) {
+            if (($expires = $this->getObjectExpirationTime($cacheKey)) !== false
+                    && $expires > time()) {
                 return false;
             }
             return $this->setValue($key, $value, $duration);
@@ -117,12 +181,7 @@ class Cache extends \yii\caching\Cache {
      */
     protected function deleteValue($key) {
         $cacheKey = $this->getCacheKey($key);
-        try {
-            $return = $this->deleteObject($cacheKey);
-            return $return['DeleteMarker'] == 'true';
-        } catch (\Aws\S3\Exception\NoSuchKeyException $exc) {
-            return false;
-        }
+        return $this->deleteObject($cacheKey);
     }
 
     /**
@@ -146,8 +205,9 @@ class Cache extends \yii\caching\Cache {
         $time = time();
         if ($force || mt_rand(0, 1000000) < $this->gcProbability) {
             foreach ($this->listCacheKeys() as $cacheKey) {
-                if (!$expiredOnly || $expiredOnly && $this->getObjectExpirationTime($cacheKey)
-                        > $time) {
+                if (!$expiredOnly || $expiredOnly && ($expires = $this->getObjectExpirationTime($cacheKey))
+                        !== false &&
+                        $expires > $time) {
                     $this->deleteObject($cacheKey);
                 }
             }
@@ -156,13 +216,14 @@ class Cache extends \yii\caching\Cache {
 
     /**
      * List cache keys.
+     * @return array array of keys.
      */
     private function listCacheKeys() {
         try {
             $objects = $this->_client->getIterator('ListObjects',
                     [
                 'Bucket' => $this->bucket,
-                'Prefix' => $this->cachePrefix,
+                'Prefix' => $this->directoryPath,
             ]);
             $keys = [];
             foreach ($objects as $object) {
@@ -233,32 +294,51 @@ class Cache extends \yii\caching\Cache {
      * @return string the cache file path
      */
     protected function getCacheKey($key) {
-        return (!empty($this->cachePrefix) ? $this->cachePrefix . '/' : '') . $key . $this->cacheFileSuffix;
+        if ($this->directoryLevel > 0) {
+            $base = $this->directoryPath;
+            for ($i = 0; $i < $this->directoryLevel; ++$i) {
+                if (($prefix = substr($key, $i + $i, 2)) !== false) {
+                    $base .= self::DIRECTORY_SEPARATOR . $prefix;
+                }
+            }
+            return (!empty($base) ? $base . self::DIRECTORY_SEPARATOR : '') . $key . $this->cacheFileSuffix;
+        } else {
+            return (!empty($this->directoryPath) ? $this->directoryPath . self::DIRECTORY_SEPARATOR : '') . $key . $this->cacheFileSuffix;
+        }
     }
 
     /**
      * Delete object in the S3
      * @param string $cacheKey the cache key.
-     * @return mixed the result.
+     * @return boolean whether the deletion succeed.
      */
     private function deleteObject($cacheKey) {
-        return $this->_client->deleteObject(array(
-                    'Bucket' => $this->bucket,
-                    'Key' => $cacheKey,
-        ));
+        try {
+            $return = $this->_client->deleteObject(array(
+                'Bucket' => $this->bucket,
+                'Key' => $cacheKey,
+            ));
+            return $return['DeleteMarker'] == 'true';
+        } catch (\Aws\S3\Exception\NoSuchKeyException $exc) {
+            return false;
+        }
     }
 
     /**
      * Get object expiration time.
      * @param string $cacheKey get the cache key.
-     * @return integer the cache key.
+     * @return integer|boolean the expiration time, false if not found.
      */
     private function getObjectExpirationTime($cacheKey) {
-        $result = $this->_client->headObject([
-            'Bucket' => $this->bucket,
-            'Key' => $cacheKey,
-        ]);
-        return strtotime($result['Expires']);
+        try {
+            $result = $this->_client->headObject([
+                'Bucket' => $this->bucket,
+                'Key' => $cacheKey,
+            ]);
+            return strtotime($result['Expires']);
+        } catch (\Aws\S3\Exception\NoSuchKeyException $exc) {
+            return false;
+        }
     }
 
     /**
