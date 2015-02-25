@@ -1,0 +1,21 @@
+{
+    "name": "urbanindo/yii2-s3cache",
+    "description": "Yii2 Component for Caching in S3",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Petra Barus",
+            "email": "petra.barus@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.5.0",
+        "yiisoft/yii2": "*",
+        "aws/aws-sdk-php": ">=2.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "UrbanIndo\\Yii2\\S3Cache\\": "src/"
+        }
+    }
+}
