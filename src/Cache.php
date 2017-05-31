@@ -1,5 +1,4 @@
 <?php
-
 /**
  * S3Cache class file.
  * @author Petra Barus <petra.barus@gmail.com>
@@ -12,24 +11,24 @@ use Aws\S3\S3Client;
 
 /**
  * S3Cache provides caching for AWS S3.
- * 
+ *
  * This is intended for large and long-lived objects.
- * 
+ *
  * There are some consideration for using the S3 Cache.
- * 
+ *
  * - It's preferable to use `\` as the separator for the key instead of `-` or
  *   other character. This will be convenient for manual cache browsing (either
  *   using S3 console or s3cmd).
- * 
- * - The getValue implementation will use only 1 GET instead of 1 GET and 1 HEAD 
- *   for expiration checking. Since the S3 is initially intended for big and 
+ *
+ * - The getValue implementation will use only 1 GET instead of 1 GET and 1 HEAD
+ *   for expiration checking. Since the S3 is initially intended for big and
  *   long-lived object, the first one is more preferable.
- * 
+ *
  * @author Petra Barus <petra.barus@gmail.com>
  * @since 2015.02.25
  */
-class Cache extends \yii\caching\Cache {
-
+class Cache extends \yii\caching\Cache
+{
     /**
      * The directory separator.
      */
@@ -39,12 +38,12 @@ class Cache extends \yii\caching\Cache {
      * A string prefixed to every cache key so that it is unique globally in the whole cache storage.
      * It is recommended that you set a unique cache key prefix for each application if the same cache
      * storage is being used by different applications.
-     * 
+     *
      * To ensure interoperability, only alphanumeric characters should be used.
-     * 
+     *
      * But for S3 cache, it's okay to use '/' for convenience.
-     * 
-     * @var string 
+     *
+     * @var string
      */
     public $keyPrefix;
 
@@ -52,7 +51,7 @@ class Cache extends \yii\caching\Cache {
      * The probability (parts per million) that garbage collection (GC) should be performed
      * when storing a piece of data in the cache. Defaults to 10, meaning 0.001% chance.
      * This number should be between 0 and 1000000. A value 0 means no GC will be performed at all.
-     * @var integer 
+     * @var integer
      */
     public $gcProbability = 10;
 
@@ -64,7 +63,7 @@ class Cache extends \yii\caching\Cache {
 
     /**
      * The directory path for the cache.
-     * 
+     *
      * This is useful if the bucket is used by many other components.
      * @var string
      */
@@ -72,7 +71,7 @@ class Cache extends \yii\caching\Cache {
 
     /**
      * The level of sub-directories to store cache files. Defaults to 0.
-     * 
+     *
      * This will separate string key into hierachical directory. This will be
      * helpful when using hashKey and manual browsing.
      * @var integer
@@ -81,14 +80,14 @@ class Cache extends \yii\caching\Cache {
 
     /**
      * Whether to hash the key or not when the key is already string.
-     * 
+     *
      * @var boolean
      */
     public $hashKey = false;
 
     /**
      * Cache file suffix. Defaults to '.bin'.
-     * @var string 
+     * @var string
      */
     public $cacheFileSuffix = '.bin';
 
@@ -120,7 +119,7 @@ class Cache extends \yii\caching\Cache {
 
     /**
      * Checks whether a specified key exists in the cache.
-     * 
+     *
      * This can be faster than getting the value from the cache if the data is big.
      * Note that this method does not check whether the dependency associated
      * with the cached data, if there is any, has changed. So a call to [[get]]
@@ -167,15 +166,18 @@ class Cache extends \yii\caching\Cache {
                 return false;
             }
             return $this->setValue($key, $value, $duration);
-        } catch (\Aws\S3\Exception\NoSuchKeyException $exc) {
-            return $this->setValue($key, $value, $duration);
+        } catch (\Aws\S3\Exception\S3Exception $exc) {
+            if (strpos($exc->getMessage(), 'Not Found') === false) {
+                throw $exc;
+            }
         }
+        return $this->setValue($key, $value, $duration);
     }
 
     /**
      * Deletes a value with the specified key from cache
      * This is the implementation of the method declared in the parent class.
-     * 
+     *
      * @param string $key the key of the value to be deleted
      * @return boolean if no error happens during deletion
      */
@@ -220,8 +222,7 @@ class Cache extends \yii\caching\Cache {
      */
     private function listCacheKeys() {
         try {
-            $objects = $this->_client->getIterator('ListObjects',
-                    [
+            $objects = $this->_client->getIterator('ListObjects', [
                 'Bucket' => $this->bucket,
                 'Prefix' => $this->directoryPath,
             ]);
@@ -239,11 +240,11 @@ class Cache extends \yii\caching\Cache {
     /**
      * Retrieves a value from cache with a specified key.
      * This is the implementation of the method declared in the parent class.
-     * 
+     *
      * The implementation will use only 1 GET instead of 1 GET and 1 HEAD for
      * expiration checking. Since the S3 is initially intended for big and
      * long-lived object, the first one is more preferable.
-     * 
+     *
      * @param string $key a unique key identifying the cached value
      * @return string|boolean the value stored in cache, false if the value is not in the cache or expired.
      */
@@ -259,9 +260,12 @@ class Cache extends \yii\caching\Cache {
                 $this->deleteObject($cacheKey);
                 return false;
             }
-        } catch (\Aws\S3\Exception\NoSuchKeyException $exc) {
-            return false;
+        } catch (\Aws\S3\Exception\S3Exception $exc) {
+            if (strpos($exc->getMessage(), 'Not Found') === false) {
+                throw $exc;
+            }
         }
+        return false;
     }
 
     /**
@@ -289,7 +293,7 @@ class Cache extends \yii\caching\Cache {
 
     /**
      * Returns the cache file path given the cache key.
-     * 
+     *
      * @param string $key cache key
      * @return string the cache file path
      */
@@ -319,9 +323,12 @@ class Cache extends \yii\caching\Cache {
                 'Key' => $cacheKey,
             ));
             return $return['DeleteMarker'] == 'true';
-        } catch (\Aws\S3\Exception\NoSuchKeyException $exc) {
-            return false;
+        } catch (\Aws\S3\Exception\S3Exception $exc) {
+            if (strpos($exc->getMessage(), 'Not Found') === false) {
+                throw $exc;
+            }
         }
+        return false;
     }
 
     /**
@@ -336,9 +343,12 @@ class Cache extends \yii\caching\Cache {
                 'Key' => $cacheKey,
             ]);
             return strtotime($result['Expires']);
-        } catch (\Aws\S3\Exception\NoSuchKeyException $exc) {
-            return false;
+        } catch (\Aws\S3\Exception\S3Exception $exc) {
+            if (strpos($exc->getMessage(), 'Not Found') === false) {
+                throw $exc;
+            }
         }
+        return false;
     }
 
     /**
@@ -348,9 +358,8 @@ class Cache extends \yii\caching\Cache {
      */
     private function getObject($cacheKey) {
         return $this->_client->getObject([
-                    'Bucket' => $this->bucket,
-                    'Key' => $cacheKey,
+            'Bucket' => $this->bucket,
+            'Key' => $cacheKey,
         ]);
     }
-
 }

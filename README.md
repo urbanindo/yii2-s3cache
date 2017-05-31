@@ -7,6 +7,11 @@ File caching component for Yii2 using AWS Simple Storage Service
 
 This is intended for large and long-lived objects.
 
+## Requirement
+
+* PHP >= 5.5
+* AWS SDK >= 3.28.0
+
 ## Installation
 
 The preferred way to install this extension is through [composer](http://getcomposer.org/download/).

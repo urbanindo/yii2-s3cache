@@ -11,7 +11,7 @@
     "require": {
         "php": ">=5.5.0",
         "yiisoft/yii2": "*",
-        "aws/aws-sdk-php": ">=2.4"
+        "aws/aws-sdk-php": "^3.28.0"
     },
     "autoload": {
         "psr-4": {
