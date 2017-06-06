@@ -8,9 +8,10 @@ apt:
     packages:
         ruby-coveralls
 env:
-    - MINIO_ACCESS_KEY=minio_access_key
-    - MINIO_SECRET_KEY=minio_secret_key
-    - MINIO_BROWSER=off
+    global:
+        - MINIO_ACCESS_KEY=minio_access_key
+        - MINIO_SECRET_KEY=minio_secret_key
+        - MINIO_BROWSER=off
 
 php:
     - 5.5
@@ -29,6 +30,7 @@ install:
 script:
     - mkdir -p build/logs
     - ./vendor/bin/phing start-minio
+    - sleep 3
     - ./vendor/bin/phing
     - ./vendor/bin/phing stop-minio
 
