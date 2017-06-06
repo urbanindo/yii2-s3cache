@@ -13,6 +13,16 @@
         "yiisoft/yii2": "*",
         "aws/aws-sdk-php": "^3.28.0"
     },
+    "require-dev": {
+        "phing/phing": "2.*",
+        "phpunit/phpunit": "4.6.*",
+        "phpunit/dbunit": ">=1.2",
+        "phpunit/php-code-coverage": "2.2.4",
+        "fzaninotto/faker": "dev-master",
+        "flow/jsonpath": "dev-master",
+        "yiisoft/yii2-coding-standards": "*",
+        "squizlabs/php_codesniffer": "2.*"
+    },
     "autoload": {
         "psr-4": {
             "UrbanIndo\\Yii2\\S3Cache\\": "src/"
