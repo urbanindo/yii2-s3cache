@@ -1,0 +1,5 @@
+################################################################################
+# Configuration for coveralls.
+# Author: Petra Barus <petra.barus@gmail.com>
+################################################################################
+coverage_clover: build/logs/clover.xml

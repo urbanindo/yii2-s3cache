@@ -1,3 +1,7 @@
+################################################################################
+# Configuration for travis.
+# Author: Petra Barus <petra.barus@gmail.com>
+################################################################################
 language: php
 dist: trusty
 apt:
@@ -14,10 +18,11 @@ before_install:
     composer self-update
 
 install:
-    composer install
+    - composer install --prefer-dist --dev
 
 script:
-    ./vendor/bin/phing
+    - mkdir -p build/logs
+    - ./vendor/bin/phphunit
 
 after_success:
-    coveralls
+    travis_retry vendor/bin/coveralls -v
