@@ -264,6 +264,9 @@ class Cache extends \yii\caching\Cache
             if (strpos($exc->getMessage(), 'Not Found') === false) {
                 throw $exc;
             }
+        } catch (\Aws\Exception\CouldNotCreateChecksumException $exc) {
+            // This exception occurs when object doesn't exist.
+            $exc; // ignore
         }
         return false;
     }
@@ -327,6 +330,9 @@ class Cache extends \yii\caching\Cache
             if (strpos($exc->getMessage(), 'Not Found') === false) {
                 throw $exc;
             }
+        } catch (\Aws\Exception\CouldNotCreateChecksumException $exc) {
+            // This exception occurs when object doesn't exist.
+            $exc; // ignore
         }
         return false;
     }
@@ -347,6 +353,9 @@ class Cache extends \yii\caching\Cache
             if (strpos($exc->getMessage(), 'Not Found') === false) {
                 throw $exc;
             }
+        } catch (\Aws\Exception\CouldNotCreateChecksumException $exc) {
+            // This exception occurs when object doesn't exist.
+            $exc; // ignore
         }
         return false;
     }
