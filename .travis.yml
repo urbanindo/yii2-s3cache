@@ -17,7 +17,7 @@ install:
     composer install
 
 script:
-    echo "TEST"
+    ./vendor/bin/phing
 
 after_success:
     coveralls
