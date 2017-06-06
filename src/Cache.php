@@ -7,6 +7,7 @@
 
 namespace UrbanIndo\Yii2\S3Cache;
 
+use Yii;
 use Aws\S3\S3Client;
 
 /**
@@ -265,8 +266,7 @@ class Cache extends \yii\caching\Cache
                 throw $exc;
             }
         } catch (\Aws\Exception\CouldNotCreateChecksumException $exc) {
-            // This exception occurs when object doesn't exist.
-            $exc; // ignore
+            Yii::warning("Cannot get {$key}: " . $exc->getTraceAsString(), 'yii2-s3cache');
         }
         return false;
     }
@@ -331,8 +331,7 @@ class Cache extends \yii\caching\Cache
                 throw $exc;
             }
         } catch (\Aws\Exception\CouldNotCreateChecksumException $exc) {
-            // This exception occurs when object doesn't exist.
-            $exc; // ignore
+            Yii::warning("Cannot get {$key}: " . $exc->getTraceAsString(), 'yii2-s3cache');
         }
         return false;
     }
@@ -354,8 +353,7 @@ class Cache extends \yii\caching\Cache
                 throw $exc;
             }
         } catch (\Aws\Exception\CouldNotCreateChecksumException $exc) {
-            // This exception occurs when object doesn't exist.
-            $exc; // ignore
+            Yii::warning("Cannot get {$key}: " . $exc->getTraceAsString(), 'yii2-s3cache');
         }
         return false;
     }
