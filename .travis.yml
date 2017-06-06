@@ -1,5 +1,9 @@
 language: php
 dist: trusty
+apt:
+    packages:
+        ruby-coveralls
+
 php:
     - 5.5
     - 5.6
