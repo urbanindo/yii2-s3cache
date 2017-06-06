@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Yii2 S3 Cache" default="main" basedir="." description="Cache component for S3">
+    <target name="clean">
+        <delete failonerror="true" verbose="true" includeemptydirs="true">
+            <fileset dir="build/" includes="**/*" />
+        </delete>
+    </target>
+    <target name="start-minio">
+        <exec command="export MINIO_ACCESS_KEY=minio_access_key"/>
+        <exec command="export MINIO_SECRET_KEY=minio_secret_key"/>
+        <exec command="export MINIO_BROWSER=off"/>
+        <exec command="mkdir -p tmp"/>
+        <exec command="./minio server tmp" spawn="true"/>
+    </target>
+    <target name="stop-minio">
+        <exec command="ps ax | grep minio | awk '{print $1}' | head -n 1 | xargs kill"/>
+    </target>
+    <target name="main">
+        <exec command="./vendor/bin/phpunit" logoutput="/dev/stdout" />
+    </target>
+</project>

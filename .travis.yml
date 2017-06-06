@@ -7,6 +7,10 @@ dist: trusty
 apt:
     packages:
         ruby-coveralls
+env:
+    - MINIO_ACCESS_KEY=minio_access_key
+    - MINIO_SECRET_KEY=minio_secret_key
+    - MINIO_BROWSER=off
 
 php:
     - 5.5
@@ -18,11 +22,15 @@ before_install:
     composer self-update
 
 install:
+    - wget https://dl.minio.io/server/minio/release/linux-amd64/minio
+    - chmod +x
     - composer install --prefer-dist --dev
 
 script:
     - mkdir -p build/logs
-    - ./vendor/bin/phpunit
+    - ./vendor/bin/phing start-minio
+    - ./vendor/bin/phing
+    - ./vendor/bin/phing stop-minio
 
 after_success:
     travis_retry vendor/bin/coveralls -v

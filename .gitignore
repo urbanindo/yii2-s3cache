@@ -6,3 +6,5 @@ vendor/
 # composer.lock
 /nbproject/private/
 build/
+minio
+tmp
